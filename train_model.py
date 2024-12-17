@@ -144,7 +144,7 @@ if __name__ == "__main__":
     batch_size = 4
 
     # add here the path to the ImageNet Mini dataset: https://www.kaggle.com/datasets/ifigotin/imagenetmini-1000/data
-    dataset_path = os.path.join(os.getcwd(), "data\\archive\\imagenet-mini")
+    dataset_path = os.path.join(os.getcwd(), "data", "archive", "imagenet-mini")
     print(dataset_path, os.path.exists(os.path.join(dataset_path)))
 
     # Load data
