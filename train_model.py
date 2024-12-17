@@ -8,6 +8,28 @@ from model import ContextEncoder, Predictor, TargetEncoder
 from utils.data_import import load_data
 from utils.masking import generate_masks
 
+
+def save_model(model, save_dir, filename):
+    """
+    Saves the given PyTorch model's state dictionary to the specified directory.
+
+    Args:
+        model (torch.nn.Module): The model to save.
+        save_dir (str): The directory where the model will be saved.
+        filename (str): The name of the file to save the model.
+    """
+    # Ensure the save directory exists
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Construct the save path
+    save_path = os.path.join(save_dir, filename)
+
+    # Save the model state dictionary
+    torch.save(model.state_dict(), save_path)
+
+    print(f"Model saved successfully to {save_path}")
+
+
 # ----------------- Pretraining Function -----------------
 
 
@@ -41,6 +63,7 @@ def train(
     target_encoder.load_state_dict(context_encoder.state_dict())
 
     try:
+        print("Start")
         for epoch in range(epochs):
             epoch_loss = 0  # Accumulate loss for the epoch
 
@@ -139,9 +162,8 @@ def train(
 
     finally:
         # Save the model at the end or if training is interrupted
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        torch.save(context_encoder.state_dict(), save_path)
-        print(f"Model saved successfully to {save_path}")
+        trained_model_dir = os.path.join(os.getcwd(), "trained_model")
+        save_model(context_encoder, trained_model_dir, save_path)
 
 
 # ----------------- Main Code -----------------
@@ -158,7 +180,7 @@ if __name__ == "__main__":
     batch_size = 4
 
     # add here the path to the ImageNet Mini dataset: https://www.kaggle.com/datasets/ifigotin/imagenetmini-1000/data
-    dataset_path = os.path.join(os.getcwd(), "data", "imagenet-mini")
+    dataset_path = os.path.join(os.getcwd(), "data", "archive", "imagenet-mini")
     print(dataset_path, os.path.exists(os.path.join(dataset_path)))
 
     # Load data
