@@ -162,7 +162,7 @@ if __name__ == "__main__":
         target_encoder,
         predictor,
         train_dataloader,
-        epochs=1,
+        epochs=4,
         save_path="context_encoder.pth",
         device=device,
         patch_size=patch_size,
