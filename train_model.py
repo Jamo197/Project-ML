@@ -103,9 +103,10 @@ def train(
                 for pred, target in zip(predictions, target_features)
             ]
             for block_idx, block_loss in enumerate(block_losses):
-                print(
-                    f"Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}], Target Block [{block_idx+1}] - Loss: {block_loss.item():.4f}"
-                )
+                if batch_idx % 100 == 0:
+                    print(
+                        f"Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}], Target Block [{block_idx+1}] - Loss: {block_loss.item():.4f}"
+                    )
 
             # Compute average loss across target blocks
             loss = sum(block_losses) / len(block_losses)
