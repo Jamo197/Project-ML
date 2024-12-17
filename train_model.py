@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -142,7 +144,8 @@ if __name__ == "__main__":
     batch_size = 4
 
     # add here the path to the ImageNet Mini dataset: https://www.kaggle.com/datasets/ifigotin/imagenetmini-1000/data
-    dataset_path = r"C:\Users\jlamp\workspace\Studium\1 Projects\Semester 4\PML\Project-ML\data\archive\imagenet-mini"
+    dataset_path = os.path.join(os.getcwd(), "data\\archive\\imagenet-mini")
+    print(dataset_path, os.path.exists(os.path.join(dataset_path)))
 
     # Load data
     train_dataloader, val_dataloader = load_data(dataset_path, batch_size)
@@ -154,13 +157,13 @@ if __name__ == "__main__":
     # visualize_masks(images, context_masks, target_masks, patch_grid_size, batch_idx=0)
 
     # Train the model using training data
-    # train(
-    #     context_encoder,
-    #     target_encoder,
-    #     predictor,
-    #     train_dataloader,
-    #     epochs=5,
-    #     save_path="context_encoder.pth",
-    #     device=device,
-    #     patch_size=patch_size,
-    # )
+    train(
+        context_encoder,
+        target_encoder,
+        predictor,
+        train_dataloader,
+        epochs=5,
+        save_path="context_encoder.pth",
+        device=device,
+        patch_size=patch_size,
+    )
