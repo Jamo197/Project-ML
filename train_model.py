@@ -61,14 +61,14 @@ def train(
             context_masks, target_masks = context_masks.to(device), target_masks.to(
                 device
             )
-            print(context_masks.shape)
+            # print(context_masks.shape)
             # Upscale context mask from patch space to pixel space
             patch_h, patch_w = patch_size, patch_size
             context_masks_pixel = torch.kron(
                 context_masks, torch.ones((1, patch_h, patch_w), device=device)
             ).unsqueeze(1)
-            print(images.shape)
-            print(context_masks_pixel.shape)
+            # print(images.shape)
+            # print(context_masks_pixel.shape)
             # Apply context mask to images in pixel space
             masked_images = images * context_masks_pixel  # Zero out masked areas
 
@@ -162,7 +162,7 @@ if __name__ == "__main__":
         target_encoder,
         predictor,
         train_dataloader,
-        epochs=5,
+        epochs=1,
         save_path="context_encoder.pth",
         device=device,
         patch_size=patch_size,
