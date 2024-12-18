@@ -62,108 +62,97 @@ def train(
     ema_decay = 0.996
     target_encoder.load_state_dict(context_encoder.state_dict())
 
-    try:
-        print("Start")
-        for epoch in range(epochs):
-            epoch_loss = 0  # Accumulate loss for the epoch
+    for epoch in range(epochs):
+        epoch_loss = 0  # Accumulate loss for the epoch
 
-            for batch_idx, (images, _) in enumerate(dataloader):
-                images = images.to(device)  # Images remain in pixel space
+        for batch_idx, (images, _) in enumerate(dataloader):
+            images = images.to(device)  # Images remain in pixel space
 
-                # Dynamically calculate patch grid size
-                patch_grid_size = (
-                    images.shape[-2] // patch_size,
-                    images.shape[-1] // patch_size,
-                )
-
-                # Generate context and target masks in patch space
-                context_masks, target_masks = generate_masks(
-                    batch_size=images.size(0),
-                    patch_grid_size=patch_grid_size,
-                    num_target_blocks=4,
-                )
-                context_masks, target_masks = context_masks.to(device), target_masks.to(
-                    device
-                )
-                # print(context_masks.shape)
-                # Upscale context mask from patch space to pixel space
-                patch_h, patch_w = patch_size, patch_size
-                context_masks_pixel = torch.kron(
-                    context_masks, torch.ones((1, patch_h, patch_w), device=device)
-                ).unsqueeze(1)
-                # print(images.shape)
-                # print(context_masks_pixel.shape)
-                # Apply context mask to images in pixel space
-                masked_images = images * context_masks_pixel  # Zero out masked areas
-
-                # Forward pass
-                context_features = context_encoder(
-                    masked_images
-                )  # Process masked images
-                full_target_embeddings = target_encoder(
-                    images
-                )  # Full embeddings for all patches
-
-                # Extract embeddings for masked target patches
-                target_features = [
-                    full_target_embeddings[
-                        :,
-                        torch.nonzero(target_masks[:, t].flatten(1), as_tuple=False)[
-                            :, 1
-                        ],
-                        :,
-                    ]
-                    for t in range(target_masks.size(1))
-                ]
-
-                # Predict embeddings for masked patches
-                predictions = [
-                    predictor(
-                        context_features,
-                        torch.nonzero(target_masks[:, t].flatten(1), as_tuple=False)[
-                            :, 1
-                        ],
-                    )
-                    for t in range(target_masks.size(1))
-                ]
-
-                # Compute individual losses
-                block_losses = [
-                    nn.MSELoss()(pred, target)
-                    for pred, target in zip(predictions, target_features)
-                ]
-                for block_idx, block_loss in enumerate(block_losses):
-                    if batch_idx % 100 == 0:
-                        print(
-                            f"Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}], Target Block [{block_idx+1}] - Loss: {block_loss.item():.4f}"
-                        )
-
-                # Compute average loss across target blocks
-                loss = sum(block_losses) / len(block_losses)
-                epoch_loss += loss.item()  # type: ignore
-
-                # Backpropagation
-                optimizer.zero_grad()
-                loss.backward()  # type: ignore
-                optimizer.step()
-
-                # EMA update for target encoder
-                with torch.no_grad():
-                    for ema_param, param in zip(
-                        target_encoder.parameters(), context_encoder.parameters()
-                    ):
-                        ema_param.data.mul_(ema_decay).add_(
-                            (1 - ema_decay) * param.data
-                        )
-            # Print average loss for the epoch
-            print(
-                f"Epoch [{epoch+1}/{epochs}] - Average Loss: {epoch_loss / len(dataloader):.4f}"
+            # Dynamically calculate patch grid size
+            patch_grid_size = (
+                images.shape[-2] // patch_size,
+                images.shape[-1] // patch_size,
             )
 
-    finally:
-        # Save the model at the end or if training is interrupted
-        trained_model_dir = os.path.join(os.getcwd(), "trained_model")
-        save_model(context_encoder, trained_model_dir, save_path)
+            # Generate context and target masks in patch space
+            context_masks, target_masks = generate_masks(
+                batch_size=images.size(0),
+                patch_grid_size=patch_grid_size,
+                num_target_blocks=4,
+            )
+            context_masks, target_masks = context_masks.to(device), target_masks.to(
+                device
+            )
+            # print(context_masks.shape)
+            # Upscale context mask from patch space to pixel space
+            patch_h, patch_w = patch_size, patch_size
+            context_masks_pixel = torch.kron(
+                context_masks, torch.ones((1, patch_h, patch_w), device=device)
+            ).unsqueeze(1)
+            # print(images.shape)
+            # print(context_masks_pixel.shape)
+            # Apply context mask to images in pixel space
+            masked_images = images * context_masks_pixel  # Zero out masked areas
+
+            # Forward pass
+            context_features = context_encoder(masked_images)  # Process masked images
+            full_target_embeddings = target_encoder(
+                images
+            )  # Full embeddings for all patches
+
+            # Extract embeddings for masked target patches
+            target_features = [
+                full_target_embeddings[
+                    :,
+                    torch.nonzero(target_masks[:, t].flatten(1), as_tuple=False)[:, 1],
+                    :,
+                ]
+                for t in range(target_masks.size(1))
+            ]
+
+            # Predict embeddings for masked patches
+            predictions = [
+                predictor(
+                    context_features,
+                    torch.nonzero(target_masks[:, t].flatten(1), as_tuple=False)[:, 1],
+                )
+                for t in range(target_masks.size(1))
+            ]
+
+            # Compute individual losses
+            block_losses = [
+                nn.MSELoss()(pred, target)
+                for pred, target in zip(predictions, target_features)
+            ]
+            for block_idx, block_loss in enumerate(block_losses):
+                if batch_idx % 100 == 0:
+                    print(
+                        f"Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}], Target Block [{block_idx+1}] - Loss: {block_loss.item():.4f}"
+                    )
+
+            # Compute average loss across target blocks
+            loss = sum(block_losses) / len(block_losses)
+            epoch_loss += loss.item()  # type: ignore
+
+            # Backpropagation
+            optimizer.zero_grad()
+            loss.backward()  # type: ignore
+            optimizer.step()
+
+            # EMA update for target encoder
+            with torch.no_grad():
+                for ema_param, param in zip(
+                    target_encoder.parameters(), context_encoder.parameters()
+                ):
+                    ema_param.data.mul_(ema_decay).add_((1 - ema_decay) * param.data)
+        # Print average loss for the epoch
+        print(
+            f"Epoch [{epoch+1}/{epochs}] - Average Loss: {epoch_loss / len(dataloader):.4f}"
+        )
+
+    # Save the model at the end or if training is interrupted
+    trained_model_dir = os.path.join(os.getcwd(), "trained_model")
+    save_model(context_encoder, trained_model_dir, save_path)
 
 
 # ----------------- Main Code -----------------
